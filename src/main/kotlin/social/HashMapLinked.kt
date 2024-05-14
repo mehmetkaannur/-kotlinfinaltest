@@ -29,23 +29,74 @@ class HashMapLinked<K, V> : OrderedMap<K, V> {
 
     override val values: List<V>
         get() {
-            TODO("To be implemented")
+            val valueList: MutableList<V> = mutableListOf()
+            var currentNode: Node<K, V>? = head
+
+            while (currentNode != null) {
+                valueList.add(currentNode.value)
+                currentNode = currentNode.next
+            }
+            return valueList
         }
 
     override fun containsKey(key: K): Boolean {
-        TODO("To be implemented")
+        return key in getBucket(key).map { it.key }
     }
 
     override fun remove(key: K): V? {
-        TODO("To be implemented")
+        if (!containsKey(key)) {
+            return null
+        }
+        val targetBucket = getBucket(key)
+        val nodeToReturn = targetBucket.first { it.key == key }
+
+        if (nodeToReturn.prev == null && nodeToReturn.next == null) {
+            this.head = null
+            this.tail = null
+        } else if (nodeToReturn.prev == null) {
+            this.head = nodeToReturn.next
+            this.head!!.prev = null
+        } else if (nodeToReturn.next == null) {
+            this.tail = nodeToReturn.prev
+            this.tail!!.next = null
+        } else {
+            val prevNode = nodeToReturn.prev
+            val nextNode = nodeToReturn.next
+            prevNode!!.next = nextNode
+            nextNode!!.prev = prevNode
+        }
+        targetBucket.remove(nodeToReturn)
+        size--
+        return nodeToReturn.value
     }
 
-    override fun set(key: K, value: V): V? {
-        TODO("To be implemented")
+    override operator fun set(key: K, value: V): V? {
+        val removedNodeValue = remove(key)
+        val newNode = Node(key, value, null, null)
+        val targetBucket = getBucket(key)
+
+        if (size == 0) {
+            this.head = newNode
+            this.tail = newNode
+        } else {
+            newNode.prev = this.tail
+            this.tail!!.next = newNode
+            this.tail = newNode
+        }
+        targetBucket.add(newNode)
+        size++
+        resize()
+        return removedNodeValue
     }
 
     override fun removeLongestStandingEntry(): Pair<K, V>? {
-        TODO("To be implemented")
+        if (size == 0) {
+            return null
+        }
+        val headKey = head!!.key
+        val headValue = this.remove(headKey)
+
+        return Pair(headKey, headValue!!)
     }
 
     private fun getBucket(key: K) = buckets[key.hashCode().mod(buckets.size)]
